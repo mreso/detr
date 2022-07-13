@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 import datasets
 import util.misc as utils
-from datasets import build_dataset, build_datapipe, get_coco_api_from_dataset
+from datasets import build_dataset, build_datapipe, build_web_datapipe, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
 from models import build_model
 
@@ -159,8 +159,12 @@ def main(args):
         data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
                                     drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
     else:
-        dataset_train = build_datapipe(image_set='train', args=args)
-        dataset_val = build_datapipe(image_set='val', args=args)
+        if args.coco_path.startswith("http"):
+            dataset_train = build_web_datapipe(image_set='train', args=args)
+            dataset_val = build_web_datapipe(image_set='val', args=args)
+        else:
+            dataset_train = build_datapipe(image_set='train', args=args)
+            dataset_val = build_datapipe(image_set='val', args=args)
 
         data_loader_train = DataLoader(dataset_train, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers)
         data_loader_val = DataLoader(dataset_val, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers)
@@ -172,6 +176,7 @@ def main(args):
         base_ds = get_coco_api_from_dataset(coco_val)
     else:
         base_ds = get_coco_api_from_dataset(dataset_val)
+    assert base_ds
 
     if args.frozen_weights is not None:
         checkpoint = torch.load(args.frozen_weights, map_location='cpu')

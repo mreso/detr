@@ -5,9 +5,12 @@ from torchdata.datapipes.iter import IterDataPipe
 from pycocotools.coco import COCO
 
 from .coco import build as build_coco
-from .coco_data_pipe import build_datapipe
+from .coco_data_pipe import build_datapipe, build_web_datapipe
 
 def find_coco(s):
+    """
+    Traverses a datastructure to find a COCO dataset structure
+    """
     for v in s.__dict__.values():
         if isinstance(v, COCO):
             return v
