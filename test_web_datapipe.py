@@ -1,5 +1,10 @@
+import os
 import pytest
 from collections import namedtuple
+
+import torch
+from torch.utils.data import DataLoader
+
 from datasets.coco_data_pipe import (
         build_web_datapipe,
         load_annotation_from_url,
@@ -41,3 +46,34 @@ def test_build_web_datapipe():
     
     assert len(item) == 2
     assert isinstance(item[1][0], dict)
+
+def training(rank, world_size):
+    pg = torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
+
+    Args = namedtuple('args', ['coco_path', 'world_size', 'batch_size', 'masks', 'rank'])
+
+    batch_size = 2
+
+    args = Args(BASE_URL, world_size, batch_size, False, rank)
+
+    dp = build_web_datapipe("train", args)
+
+
+    dl = DataLoader(dp, batch_size=None, collate_fn=lambda x: x, num_workers=2)
+    item = next(iter(dl))
+
+    assert len(item) == 2
+    assert isinstance(item[1][0], dict)
+
+
+def test_web_datapipe():
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "29500"
+    world_size = 8
+
+    torch.multiprocessing.spawn(
+        training,
+        args=(world_size, ),
+        nprocs=world_size,
+        join=True,
+    )

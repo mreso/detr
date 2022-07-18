@@ -166,8 +166,12 @@ def main(args):
             dataset_train = build_datapipe(image_set='train', args=args)
             dataset_val = build_datapipe(image_set='val', args=args)
 
-        data_loader_train = DataLoader(dataset_train, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers)
-        data_loader_val = DataLoader(dataset_val, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers)
+        # This is a teporary fix for this issue in torchdata https://github.com/pytorch/data/issues/659
+        if args.rank != 0:
+            time.sleep(20)
+
+        data_loader_train = DataLoader(dataset_train, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers, prefetch_factor=8)
+        data_loader_val = DataLoader(dataset_val, batch_size=None, collate_fn=lambda x: x, num_workers=args.num_workers, prefetch_factor=8)
 
 
     if args.dataset_file == "coco_panoptic":
